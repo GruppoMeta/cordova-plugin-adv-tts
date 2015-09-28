@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="cordova-plugin-adv-tts" version="0.1">
+    <name>Advanced TTS</name>
+    <description>Cordova Plugin Adv TTS</description>
+    <license>Apache 2.0</license>
+    <keywords>cordova,device</keywords>
+    <js-module src="www/advtts.js" name="advtts">
+        <clobbers target="advtts" />
+    </js-module>
+
+    <platform name="android">
+        <config-file target="config.xml" parent="/*">
+            <feature name="Advtts">
+                <param name="android-package" value="it.gruppometa.cordova.Advtts"/>
+            </feature>
+         
+        </config-file>
+        <source-file src="src/android/it/gruppometa/cordova/Advtts.java" target-dir="src/it/gruppometa/cordova" />
+    </platform>
+</plugin>
