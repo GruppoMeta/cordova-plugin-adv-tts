@@ -17,4 +17,17 @@
         </config-file>
         <source-file src="src/android/it/gruppometa/cordova/Advtts.java" target-dir="src/it/gruppometa/cordova" />
     </platform>
+    
+    <!-- ios -->
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="Advtts">
+                <param name="ios-package" value="Advtts" />
+            </feature>
+        </config-file>
+
+        <header-file src="src/ios/advtts.h" />
+        <source-file src="src/ios/advtts.m" />
+
+    </platform>
 </plugin>
