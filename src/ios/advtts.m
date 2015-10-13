@@ -6,9 +6,9 @@
 //
 //
 
-#import "advtts.h"
+#import "Advtts.h"
 
-@implementation advtts
+@implementation Advtts
 
 
 - (void)pluginInitialize
@@ -16,81 +16,104 @@
     if( !synthesizer ){
         synthesizer = [AVSpeechSynthesizer new];
         synthesizer.delegate = self;
+        locale = @"it-IT";
     }
 }
 
 
-- (void)registerCallback:(CDVInvokedUrlCommand*)command
+-(void)registerCallback:(CDVInvokedUrlCommand*)command
 {
-    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
-    [ result setKeepCallbackAsBool:YES ];
-    [self.commandDelegate sendPluginResult:result callbackId:CDVCommandStatus_NO_RESULT];
-    callbackId = command.callbackId;
-}
-
-
-- (void)speechSynthesizer:(AVSpeechSynthesizer*)synthesizer didFinishSpeechUtterance:(AVSpeechUtterance*)utterance {
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    if( callbackId ){
-        [self.commandDelegate sendPluginResult:result callbackId:callbackId];
-        callbackId = nil;
-    }
+    [ result setKeepCallbackAsBool:YES ];
+    regCallbackId = command.callbackId;
+    
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
 }
 
 
-- (void)speak:(CDVInvokedUrlCommand*)command
+-(void)setProp:(CDVInvokedUrlCommand*)command
+{
+    locale = [command.arguments objectAtIndex:0];
+    if( locale.length == 2 )
+        locale = [ NSString stringWithFormat:@"%@-%@", locale, locale.uppercaseString ];
+    
+    rate = [command.arguments[1] doubleValue];
+    
+    //Feedback result
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [ result setKeepCallbackAsBool:YES ];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
+}
+
+
+-(void)speak:(CDVInvokedUrlCommand*)command
 {
     [synthesizer stopSpeakingAtBoundary:AVSpeechBoundaryImmediate];
     
-    NSDictionary* options = [command.arguments objectAtIndex:0];
-    
-    NSString* text = [options objectForKey:@"text"];
-    NSString* locale = [options objectForKey:@"locale"];
-    double rate = [[options objectForKey:@"rate"] doubleValue];
-    
-    if (!locale || (id)locale == [NSNull null]) {
-        locale = @"it-IT";
-    }
-    
-    if (!rate) {
-        rate = 1.0;
-    }
+    NSString* text = [command.arguments objectAtIndex:0];
     
     AVSpeechUtterance* utterance = [[AVSpeechUtterance new] initWithString:text];
     utterance.voice = [AVSpeechSynthesisVoice voiceWithLanguage:locale];
-    utterance.rate = (AVSpeechUtteranceMinimumSpeechRate * 1.5 + AVSpeechUtteranceDefaultSpeechRate) / 2.5 * rate * rate;
+    utterance.rate = AVSpeechUtteranceDefaultSpeechRate * rate;
+    //(AVSpeechUtteranceMinimumSpeechRate * 1.5 + AVSpeechUtteranceDefaultSpeechRate) / 2.5 * rate * rate;
     utterance.pitchMultiplier = 1.2;
     [synthesizer speakUtterance:utterance];
     
+    //Feedback result
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [ result setKeepCallbackAsBool:YES ];
-    
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
-    [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"startSpeak"] callbackId:callbackId];
+    if( regCallbackId ){
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"startSpeak"];
+        [ result setKeepCallbackAsBool:YES ];
+        [self.commandDelegate sendPluginResult:result callbackId:regCallbackId];
+    }
 }
 
 
-- (void)pause:(CDVInvokedUrlCommand*)command
+-(void)pause:(CDVInvokedUrlCommand*)command
 {
+    [ synthesizer pauseSpeakingAtBoundary:AVSpeechBoundaryImmediate ];
+    //Feedback result
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [ result setKeepCallbackAsBool:YES ];
-    
-    [synthesizer pauseSpeakingAtBoundary:AVSpeechBoundaryImmediate];
-    
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
-    [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"stopSpeak"] callbackId:callbackId];
+    if( regCallbackId ){
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"stopSpeak"];
+        [ result setKeepCallbackAsBool:YES ];
+        [self.commandDelegate sendPluginResult:result callbackId:regCallbackId];
+    }
 }
 
 
-- (void)resume:(CDVInvokedUrlCommand*)command
+-(void)resume:(CDVInvokedUrlCommand*)command
+{
+    [ synthesizer continueSpeaking ];
+    //Feedback result
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
+    if( regCallbackId ){
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"startSpeak"];
+        [ result setKeepCallbackAsBool:YES ];
+        [self.commandDelegate sendPluginResult:result callbackId:regCallbackId];
+    }
+}
+
+
+-(void)ADV_method:(CDVInvokedUrlCommand*)command
+{
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
+}
+
+
+-(void)speechSynthesizer:(AVSpeechSynthesizer*)synthesizer didFinishSpeechUtterance:(AVSpeechUtterance*)utterance
 {
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [ result setKeepCallbackAsBool:YES ];
-    
-    [synthesizer continueSpeaking];
-    
-    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId ];
-    [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"startSpeak"] callbackId:callbackId];
+    if( regCallbackId ){
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"stopSpeak"];
+        [ result setKeepCallbackAsBool:YES ];
+        [self.commandDelegate sendPluginResult:result callbackId:regCallbackId];
+    }
 }
 
 @end

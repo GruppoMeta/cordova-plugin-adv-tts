@@ -9,15 +9,20 @@
 #import <Cordova/CDV.h>
 #import <AVFoundation/AVFoundation.h>
 
-@interface advtts : CDVPlugin <AVSpeechSynthesizerDelegate> {
+@interface Advtts : CDVPlugin <AVSpeechSynthesizerDelegate> {
     AVSpeechSynthesizer* synthesizer;
-    NSString* callbackId;
+    NSString* regCallbackId;
+    NSString* locale;
+    double rate;
 }
 
 
+/*
+- (void)setProp:(CDVInvokedUrlCommand*)command;
 - (void)registerCallback:(CDVInvokedUrlCommand*)command;
 - (void)speak:(CDVInvokedUrlCommand*)command;
 - (void)pause:(CDVInvokedUrlCommand*)command;
 - (void)resume:(CDVInvokedUrlCommand*)command;
+*/
 
 @end
