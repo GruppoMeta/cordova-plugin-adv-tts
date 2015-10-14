@@ -8,6 +8,8 @@
 
 #import "Advtts.h"
 
+#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
+
 @implementation Advtts
 
 
@@ -54,8 +56,10 @@
     
     AVSpeechUtterance* utterance = [[AVSpeechUtterance new] initWithString:text];
     utterance.voice = [AVSpeechSynthesisVoice voiceWithLanguage:locale];
-    utterance.rate = AVSpeechUtteranceDefaultSpeechRate * rate;
-    //(AVSpeechUtteranceMinimumSpeechRate * 1.5 + AVSpeechUtteranceDefaultSpeechRate) / 2.5 * rate * rate;
+    if( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"9.0") )
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * rate;
+    else
+        utterance.rate = (AVSpeechUtteranceMinimumSpeechRate * 1.5 + AVSpeechUtteranceDefaultSpeechRate) / 2.5 * rate * rate;
     utterance.pitchMultiplier = 1.2;
     [synthesizer speakUtterance:utterance];
     
