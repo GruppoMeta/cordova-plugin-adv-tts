@@ -2,23 +2,26 @@
 package it.gruppometa.cordova;
 
 
+import java.io.File;
+import java.util.Locale;
+
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.PluginResult;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
-import java.io.File;
-import java.util.Locale;
-import org.apache.cordova.CordovaWebView;
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaInterface;
-import org.apache.cordova.PluginResult;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 
 public class Advtts extends CordovaPlugin {
@@ -33,6 +36,7 @@ public class Advtts extends CordovaPlugin {
       
     }
     TextToSpeech ttsEngine;
+    boolean supportsPause = Build.VERSION.SDK_INT>=21;
     private CallbackContext jsListener;
     /**
      * Sets the context of the Command. This can then be used to do things like
@@ -45,7 +49,7 @@ public class Advtts extends CordovaPlugin {
     private File dest;
     public void initialize(final CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
-        File local=cordova.getActivity().getFilesDir();
+        File local=cordova.getActivity().getDir("audio", Context.MODE_WORLD_WRITEABLE);
         dest=new File(local,"tempaudio.mp3");
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
 
@@ -72,6 +76,7 @@ public class Advtts extends CordovaPlugin {
 
             @Override
             public void onDone(String string) {
+            	Log.d(TAG, "Syntesizing completed");
                 try {
                     mediaPlayer.setDataSource(cordova.getActivity(),Uri.fromFile(dest));
                     mediaPlayer.prepare();
@@ -86,6 +91,7 @@ public class Advtts extends CordovaPlugin {
 
             @Override
             public void onError(String string) {
+            	Log.e(TAG, "Syntesizing aborted: "+string);
                 sendError(string);
             }
         });
@@ -123,13 +129,17 @@ public class Advtts extends CordovaPlugin {
             return true;
         }
         if(action.equals("stop")) {
-             mediaPlayer.stop();
+        	Log.d(TAG, "Stop");
+            if(supportsPause) mediaPlayer.stop();
+            else ttsEngine.stop();
             send("stopSpeak");
             callbackContext.success();
             return true;
         }
         if(action.equals("pause")) {
-            if(mediaPlayer.isPlaying())  mediaPlayer.pause();
+        	Log.d(TAG, "Pause");
+            if(supportsPause && mediaPlayer.isPlaying())  mediaPlayer.pause();
+            else ttsEngine.stop();
             send("stopSpeak");
             callbackContext.success();
             return true;
@@ -167,8 +177,10 @@ public class Advtts extends CordovaPlugin {
             mediaPlayer.reset();
             String testo=args.getString(0);
             ttsEngine.stop();
-            if(Build.VERSION.SDK_INT>=21) ttsEngine.synthesizeToFile(testo, null, dest,"1");
-            else ttsEngine.synthesizeToFile(testo, null, dest.getPath());
+            Log.d(TAG, "Syntesizing: "+testo);
+            if(supportsPause) ttsEngine.synthesizeToFile(testo, null, dest,"1");
+//            else ttsEngine.synthesizeToFile(testo, null, dest.getPath());
+            else ttsEngine.speak(testo, TextToSpeech.QUEUE_FLUSH, null);
             JSONObject r = new JSONObject();
             callbackContext.success(r);
             return true;
@@ -180,4 +192,5 @@ public class Advtts extends CordovaPlugin {
 
 
 }
+
 
