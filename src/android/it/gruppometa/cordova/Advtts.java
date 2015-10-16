@@ -2,8 +2,10 @@
 package it.gruppometa.cordova;
 
 
+import android.annotation.SuppressLint;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Build;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
@@ -39,7 +41,6 @@ public class Advtts extends CordovaPlugin {
      * @param cordova The context of the main Activity.
      * @param webView The CordovaWebView Cordova is running in.
      */
-    private Locale.Builder localeBuilder=new Locale.Builder();
     private MediaPlayer mediaPlayer=new MediaPlayer();
     private File dest;
     public void initialize(final CordovaInterface cordova, CordovaWebView webView) {
@@ -112,7 +113,7 @@ public class Advtts extends CordovaPlugin {
      * @return                  True if the action was valid, false if not.
      */
 
-    @Override
+    @SuppressLint("NewApi") @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if(action.equals("registerCallback")) {
             PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
@@ -150,9 +151,7 @@ public class Advtts extends CordovaPlugin {
             String language=args.getString(0);
             double rate=args.getDouble(1);
             Log.e(TAG,"setProp:"+language+" rate:"+rate);
-            localeBuilder.clear();
-            localeBuilder.setLanguage(language);
-            final Locale l=localeBuilder.build();
+            Locale l = new Locale(language);
             int res=ttsEngine.setLanguage(l);
             ttsEngine.setSpeechRate((float)rate);
             if(TextToSpeech.LANG_NOT_SUPPORTED==res) {
@@ -168,7 +167,8 @@ public class Advtts extends CordovaPlugin {
             mediaPlayer.reset();
             String testo=args.getString(0);
             ttsEngine.stop();
-            ttsEngine.synthesizeToFile(testo, null, dest,"1");
+            if(Build.VERSION.SDK_INT>=21) ttsEngine.synthesizeToFile(testo, null, dest,"1");
+            else ttsEngine.synthesizeToFile(testo, null, dest.getPath());
             JSONObject r = new JSONObject();
             callbackContext.success(r);
             return true;
@@ -180,3 +180,4 @@ public class Advtts extends CordovaPlugin {
 
 
 }
+
