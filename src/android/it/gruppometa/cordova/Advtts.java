@@ -2,6 +2,7 @@
 package it.gruppometa.cordova;
 
 
+import java.util.HashMap;
 import java.util.Locale;
 
 import org.apache.cordova.CallbackContext;
@@ -14,6 +15,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.annotation.SuppressLint;
+import android.os.Build;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
@@ -21,6 +23,7 @@ import android.util.Log;
 
 public class Advtts extends CordovaPlugin {
     public static final String TAG = "Advtts";
+    private static HashMap<String, String> utteranceId;
     private String[] text;
     private int position=0;
     private boolean mustStop=false;
@@ -31,8 +34,8 @@ public class Advtts extends CordovaPlugin {
      * Constructor.
      */
     public Advtts() {
-        
-      
+    	utteranceId = new HashMap<String, String>();
+    	utteranceId.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID,TAG);
     }
     
     /**
@@ -48,34 +51,44 @@ public class Advtts extends CordovaPlugin {
                 @Override
                 public void onInit(int status) {
                    if(status != TextToSpeech.ERROR) {
+                	   ttsEngine.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+               			
+               			@Override
+               			public void onStart(String utteranceId) {
+               				Log.d(TAG, "Utterance listener: start");
+               			}
+               			
+               			@Override
+               			@Deprecated
+               			public void onError(String utteranceId) {
+               				Log.e(TAG, "Utterance listener: error");
+               			}
+               			
+               			@SuppressLint("NewApi") @Override
+               			public void onDone(String utteranceId) {
+               				Log.d(TAG, "Utterance listener: done utterance "+position+", mustStop: "+mustStop);
+               				if(!mustStop && position<text.length-1){
+               					position++;
+               					Log.d(TAG, "Now speacking sentence "+position+" in "+text.length+": \""+text[position]);
+               					if(Build.VERSION.SDK_INT>=21) ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null, TAG);
+               					else ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, Advtts.utteranceId);
+               				} else if(position>=text.length-1) {
+               					position=0;
+               					mustStop=false;
+               				}
+               			}
+               		});
                    }
                 }
              });
-        ttsEngine.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-			
-			@Override
-			public void onStart(String utteranceId) {}
-			
-			@Override
-			@Deprecated
-			public void onError(String utteranceId) {}
-			
-			@Override
-			public void onDone(String utteranceId) {
-				if(!mustStop){
-					position++;
-					ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null);
-				}
-			}
-		});
     }
-    private void sendError(String val) {
-        if(jsListener!=null) {
-            PluginResult r=new PluginResult(PluginResult.Status.ERROR,val);
-            r.setKeepCallback(true);
-            jsListener.sendPluginResult(r);
-        }
-    }
+//    private void sendError(String val) {
+//        if(jsListener!=null) {
+//            PluginResult r=new PluginResult(PluginResult.Status.ERROR,val);
+//            r.setKeepCallback(true);
+//            jsListener.sendPluginResult(r);
+//        }
+//    }
     private void send(String val) {
         if(jsListener!=null) {
             PluginResult r=new PluginResult(PluginResult.Status.OK,val);
@@ -119,9 +132,11 @@ public class Advtts extends CordovaPlugin {
             return true;
         }
         if(action.equals("resume")) {
+        	Log.d(TAG,"resume: mustStop="+mustStop+" position="+position);
             try {
             	mustStop=false;
-            	ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null);
+            	if(Build.VERSION.SDK_INT>=21) ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null, TAG);
+				else ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, utteranceId);
                 send("startSpeak");
                 PluginResult result = new PluginResult(PluginResult.Status.OK);
                 callbackContext.sendPluginResult(result);
@@ -135,7 +150,7 @@ public class Advtts extends CordovaPlugin {
             
             String language=args.getString(0);
             double rate=args.getDouble(1);
-            Log.e(TAG,"setProp:"+language+" rate:"+rate);
+            Log.d(TAG,"setProp:"+language+" rate:"+rate);
             Locale l = new Locale(language);
             int res=ttsEngine.setLanguage(l);
             ttsEngine.setSpeechRate((float)rate);
@@ -151,9 +166,14 @@ public class Advtts extends CordovaPlugin {
             send("startSpeak");
             ttsEngine.stop();
             mustStop=false;
-            text=args.getString(0).split(".");
+            Log.d(TAG, args.getString(0));
+//          Splitta la stringa ad ogni segno di punteggiatura, in modo da offrire una migliore granularità per il tasto Pause
+            text=args.getString(0).split("[,.:;!?\\n]");
+            Log.d(TAG, text.length+" sentences. First one is \""+text[0]+"\"");
             Log.d(TAG, "Start Syntesizing.");
-            ttsEngine.speak(text[0], TextToSpeech.QUEUE_FLUSH, null);
+            position=0;
+            if(Build.VERSION.SDK_INT>=21) ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null, TAG);
+			else ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, utteranceId);
             JSONObject r = new JSONObject();
             callbackContext.success(r);
             return true;
@@ -165,6 +185,7 @@ public class Advtts extends CordovaPlugin {
 
 
 }
+
 
 
 
