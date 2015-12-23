@@ -51,6 +51,7 @@ public class Advtts extends CordovaPlugin {
                 @Override
                 public void onInit(int status) {
                    if(status != TextToSpeech.ERROR) {
+			   if(ttsEngine == null) return;
                 	   ttsEngine.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                			
                			@Override
