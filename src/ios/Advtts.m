@@ -63,9 +63,9 @@
     utterance.voice = [AVSpeechSynthesisVoice voiceWithLanguage:locale];
         
     if( floor(NSFoundationVersionNumber) >= NSFoundationVersionNumber_iOS_8_0 && floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_8_4 )
-        utterance.rate = 0.1;
+        utterance.rate = 0.05;
     else
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * rate;
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate *0.85 * rate;
     
     /*
     if( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"9.0") )
