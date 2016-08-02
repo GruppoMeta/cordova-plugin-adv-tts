@@ -18,6 +18,11 @@
     if( !synthesizer ){
         synthesizer = [AVSpeechSynthesizer new];
         synthesizer.delegate = self;
+        
+        AVSpeechUtterance *bugWorkaroundUtterance = [AVSpeechUtterance speechUtteranceWithString:@" "];
+        bugWorkaroundUtterance.rate = AVSpeechUtteranceMaximumSpeechRate;
+        [synthesizer speakUtterance:bugWorkaroundUtterance];
+        
         locale = @"it-IT";
     }
 }
@@ -56,10 +61,30 @@
     
     AVSpeechUtterance* utterance = [[AVSpeechUtterance new] initWithString:text];
     utterance.voice = [AVSpeechSynthesisVoice voiceWithLanguage:locale];
+    
+    if( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"9.0") )
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * rate;
+    else {
+        if( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0") )
+            utterance.rate = 0.05;
+        else
+            utterance.rate = (AVSpeechUtteranceMinimumSpeechRate + AVSpeechUtteranceDefaultSpeechRate) / 3.0 * rate * rate;
+    }
+    /*
+    int iOSv = floor(NSFoundationVersionNumber);
+    int ios7 = NSFoundationVersionNumber_iOS_7_0;
+    
+    if( floor(NSFoundationVersionNumber) >= NSFoundationVersionNumber_iOS_8_0 && floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_8_4 )
+        utterance.rate = 0.05;
+    else
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate *0.85* rate;
+    */
+    /*
     if( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"9.0") )
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate * rate;
     else
         utterance.rate = (AVSpeechUtteranceMinimumSpeechRate * 1.5 + AVSpeechUtteranceDefaultSpeechRate) / 2.5 * rate * rate;
+     */
     utterance.pitchMultiplier = 1.2;
     [synthesizer speakUtterance:utterance];
     
