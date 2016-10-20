@@ -2,38 +2,42 @@
 package it.gruppometa.cordova;
 
 
-import android.annotation.SuppressLint;
-import android.media.MediaPlayer;
-import android.net.Uri;
-import android.os.Build;
-import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
-import android.util.Log;
-import java.io.File;
+import java.util.HashMap;
 import java.util.Locale;
-import org.apache.cordova.CordovaWebView;
+
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.annotation.SuppressLint;
+import android.os.Build;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import android.util.Log;
+
 
 public class Advtts extends CordovaPlugin {
     public static final String TAG = "Advtts";
-
+    private static HashMap<String, String> utteranceId;
+    private String[] text;
+    private int position=0;
+    private boolean mustStop=false;
+    private TextToSpeech ttsEngine;
+    private CallbackContext jsListener;
 
     /**
      * Constructor.
      */
     public Advtts() {
-        
-      
+    	utteranceId = new HashMap<String, String>();
+    	utteranceId.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID,TAG);
     }
-    TextToSpeech ttsEngine;
-    private CallbackContext jsListener;
+    
     /**
      * Sets the context of the Command. This can then be used to do things like
      * get file paths associated with the Activity.
@@ -41,62 +45,51 @@ public class Advtts extends CordovaPlugin {
      * @param cordova The context of the main Activity.
      * @param webView The CordovaWebView Cordova is running in.
      */
-    private MediaPlayer mediaPlayer=new MediaPlayer();
-    private File dest;
     public void initialize(final CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
-        File local=cordova.getActivity().getFilesDir();
-        dest=new File(local,"tempaudio.mp3");
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-              send("stopSpeak");
-            }
-        });
         ttsEngine=new TextToSpeech(cordova.getActivity().getApplication(), new TextToSpeech.OnInitListener() {
                 @Override
                 public void onInit(int status) {
                    if(status != TextToSpeech.ERROR) {
+			   if(ttsEngine == null) return;
+                	   ttsEngine.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+               			
+               			@Override
+               			public void onStart(String utteranceId) {
+               				Log.d(TAG, "Utterance listener: start");
+               			}
+               			
+               			@Override
+               			@Deprecated
+               			public void onError(String utteranceId) {
+               				Log.e(TAG, "Utterance listener: error");
+               			}
+               			
+               			@SuppressLint("NewApi") @Override
+               			public void onDone(String utteranceId) {
+               				Log.d(TAG, "Utterance listener: done utterance "+position+", mustStop: "+mustStop);
+               				if(!mustStop && position<text.length-1){
+               					position++;
+               					Log.d(TAG, "Now speacking sentence "+position+" in "+text.length+": \""+text[position]);
+               					if(Build.VERSION.SDK_INT>=21) ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null, TAG);
+               					else ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, Advtts.utteranceId);
+               				} else if(position>=text.length-1) {
+               					position=0;
+               					mustStop=false;
+               				}
+               			}
+               		});
                    }
                 }
              });
-        
-        ttsEngine.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-
-            @Override
-            public void onStart(String string) {
-                
-                
-            }
-
-            @Override
-            public void onDone(String string) {
-                try {
-                    mediaPlayer.setDataSource(cordova.getActivity(),Uri.fromFile(dest));
-                    mediaPlayer.prepare();
-                    mediaPlayer.start();
-                    send("startSpeak");
-                } catch (Exception e) {
-                    Log.e(TAG,"Error",e);
-                    sendError(e.getMessage());
-                    send("stopSpeak");
-                }
-            }
-
-            @Override
-            public void onError(String string) {
-                sendError(string);
-            }
-        });
     }
-    private void sendError(String val) {
-        if(jsListener!=null) {
-            PluginResult r=new PluginResult(PluginResult.Status.ERROR,val);
-            r.setKeepCallback(true);
-            jsListener.sendPluginResult(r);
-        }
-    }
+//    private void sendError(String val) {
+//        if(jsListener!=null) {
+//            PluginResult r=new PluginResult(PluginResult.Status.ERROR,val);
+//            r.setKeepCallback(true);
+//            jsListener.sendPluginResult(r);
+//        }
+//    }
     private void send(String val) {
         if(jsListener!=null) {
             PluginResult r=new PluginResult(PluginResult.Status.OK,val);
@@ -123,20 +116,28 @@ public class Advtts extends CordovaPlugin {
             return true;
         }
         if(action.equals("stop")) {
-             mediaPlayer.stop();
+        	Log.d(TAG, "Stop");
+        	mustStop=true;
+            ttsEngine.stop();
+            position=0;
             send("stopSpeak");
             callbackContext.success();
             return true;
         }
         if(action.equals("pause")) {
-            if(mediaPlayer.isPlaying())  mediaPlayer.pause();
+        	Log.d(TAG, "Pause");
+        	mustStop=true;
+            ttsEngine.stop();
             send("stopSpeak");
             callbackContext.success();
             return true;
         }
         if(action.equals("resume")) {
+        	Log.d(TAG,"resume: mustStop="+mustStop+" position="+position);
             try {
-                mediaPlayer.start();
+            	mustStop=false;
+            	if(Build.VERSION.SDK_INT>=21) ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null, TAG);
+				else ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, utteranceId);
                 send("startSpeak");
                 PluginResult result = new PluginResult(PluginResult.Status.OK);
                 callbackContext.sendPluginResult(result);
@@ -150,7 +151,7 @@ public class Advtts extends CordovaPlugin {
             
             String language=args.getString(0);
             double rate=args.getDouble(1);
-            Log.e(TAG,"setProp:"+language+" rate:"+rate);
+            Log.d(TAG,"setProp:"+language+" rate:"+rate);
             Locale l = new Locale(language);
             int res=ttsEngine.setLanguage(l);
             ttsEngine.setSpeechRate((float)rate);
@@ -163,12 +164,17 @@ public class Advtts extends CordovaPlugin {
             return true;
         }
         if (action.equals("speak")) {
-            send("stopSpeak");
-            mediaPlayer.reset();
-            String testo=args.getString(0);
+            send("startSpeak");
             ttsEngine.stop();
-            if(Build.VERSION.SDK_INT>=21) ttsEngine.synthesizeToFile(testo, null, dest,"1");
-            else ttsEngine.synthesizeToFile(testo, null, dest.getPath());
+            mustStop=false;
+            Log.d(TAG, args.getString(0));
+//          Splitta la stringa ad ogni segno di punteggiatura, in modo da offrire una migliore granularità per il tasto Pause
+            text=args.getString(0).split("[,.:;!?\\n]");
+            Log.d(TAG, text.length+" sentences. First one is \""+text[0]+"\"");
+            Log.d(TAG, "Start Syntesizing.");
+            position=0;
+            if(Build.VERSION.SDK_INT>=21) ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, null, TAG);
+			else ttsEngine.speak(text[position], TextToSpeech.QUEUE_FLUSH, utteranceId);
             JSONObject r = new JSONObject();
             callbackContext.success(r);
             return true;
@@ -180,4 +186,7 @@ public class Advtts extends CordovaPlugin {
 
 
 }
+
+
+
 
