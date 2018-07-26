@@ -1,0 +1,29 @@
+{
+  "name": "cordova-plugin-adv-tts",
+  "version": "1.0.0",
+  "description": "Cordova Plugin Adv TTS",
+  "cordova": {
+    "id": "cordova-plugin-adv-tts",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GruppoMeta/cordova-plugin-adv-tts.git"
+  },
+  "keywords": [
+    "cordova",
+    "device",
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova-ios"
+  ],
+  "author": "GruppoMeta",
+  "license": "Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/GruppoMeta/cordova-plugin-adv-tts/issues"
+  },
+  "homepage": "https://github.com/GruppoMeta/cordova-plugin-adv-tts#readme"
+}
