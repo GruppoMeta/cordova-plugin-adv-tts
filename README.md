@@ -5,7 +5,7 @@ Support pause and resume.
 
 ## Installation
 
-    cordova plugin add https://github.com/danieleguiducci/cordova-plugin-adv-tts.git
+    cordova plugin add https://github.com/GruppoMeta/cordova-plugin-adv-tts.git
 
 
 ## Supported Platforms
